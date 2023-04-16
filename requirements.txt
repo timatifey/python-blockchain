@@ -1,0 +1,2 @@
+Flask==2.2.3
+grequests==0.6.0
