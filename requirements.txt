@@ -1,3 +1,4 @@
 Flask==2.2.3
 grequests==0.6.0
 gevent==22.10.2
+pytest==7.2.2
