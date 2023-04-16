@@ -1,28 +1,29 @@
 from flask import Flask, request
 import time
 import threading
-import logging
 import grequests
-from block import build_block, GENESIS_BLOCK, Block
+import logging
+import sys
+
+from block import Block, build_block_from_json
+from node import Node
 
 BLOCK_GENERATOR_DELAY = 0.2
+START_PORT = 5000
+NODES_COUNT = 3
 
 
 class Server:
-    def __init__(self, current_node):
-        self.node_id = current_node.node_id
-        logging.getLogger('werkzeug').disabled = True
-
-        node_id_to_ports = {
-            1: (5000, 5001, 5002),
-            2: (5001, 5000, 5002)
-        }
-        default_node_id_to_ports = (5002, 5000, 5001)
-        ports = node_id_to_ports.get(self.node_id, default_node_id_to_ports)
+    def __init__(self, node: Node):
         self.host = 'localhost'
-        self.urls = (f'http://{self.host}:{port}/' for port in ports)
-        self.current_port = ports[0]
-        self.current_node = current_node
+        self.urls = [f'http://{self.host}:{START_PORT + offset}/' for offset in range(NODES_COUNT)]
+        self.current_port = START_PORT + node.node_id - 1
+        self.node: Node = node
+
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+        logging.getLogger('werkzeug').disabled = True
+        logging.getLogger('urllib3.connectionpool').disabled = True
+        self.logger = logging.getLogger(f"NODE_{node.node_id}")
 
     def send_block(self, block: Block):
         async_requests = (grequests.post(url, json=block.as_json) for url in self.urls)
@@ -30,18 +31,9 @@ class Server:
 
     def blocks_generator(self):
         while True:
-            if self.current_node.blocks_array:
-                last_block = self.current_node.blocks_array[-1]
-
-                new_block = build_block(
-                    index=self.current_node.block_index + 1,
-                    prev_hash=last_block.hash,
-                    nonce_type=self.current_node.node_id,
-                    node_id=self.node_id
-                )
-                if new_block.index > self.current_node.block_index:
-                    self.send_block(new_block)
-
+            new_block = self.node.generate_next_block()
+            if new_block is not None and new_block.index > self.node.block_index:
+                self.send_block(new_block)
             time.sleep(BLOCK_GENERATOR_DELAY)
 
     def start(self):
@@ -49,19 +41,19 @@ class Server:
 
         @server.route("/", methods=['POST'])
         def server_handler():
-            received_block = request.get_json()
-            block_handled = self.current_node.handle_block(received_block)
-            return "Received new block" if block_handled else "Block Error"
+            block = build_block_from_json(request.get_json())
+            self.logger.debug(f"Received block from Node[{block.node_id}]: index = {block.index}")
 
-        server = threading.Thread(target=server.run, args=(self.host, self.current_port))
-        blocks_generator_thread = threading.Thread(target=self.blocks_generator)
+            block_handled = self.node.handle_block(block)
+            msg = f"{'Append' if block_handled else 'Ignored'} block from Node[{block.node_id}]: index = {block.index}"
+            self.logger.debug(msg)
 
-        server.daemon = False
-        blocks_generator_thread.daemon = False
+            if block_handled:
+                self.logger.debug(str(block))
+            return msg
 
-        server.start()
+        server_thread = threading.Thread(target=server.run, args=(self.host, self.current_port), daemon=False)
+        blocks_generator_thread = threading.Thread(target=self.blocks_generator, daemon=False)
+
+        server_thread.start()
         blocks_generator_thread.start()
-
-        if self.node_id == 1:
-            time.sleep(1)
-            self.send_block(GENESIS_BLOCK)
