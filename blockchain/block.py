@@ -85,12 +85,12 @@ def build_block(index, prev_hash, nonce_type, node_id):
 
 def block_to_string(block):
     return f'Node[{block.node_id}]: ' + \
-        f'Index={block.index},' + \
-        f'Hash={block.hash},' + \
-        f'Previous hash={block.prev_hash},' + \
-        f'Data={block.data},' + \
-        f'Nonce={block.nonce}'
+        f'Index = {block.index}, ' + \
+        f'Hash = {block.hash}, ' + \
+        f'Previous hash = {block.prev_hash}, ' + \
+        f'Data = {block.data}, ' + \
+        f'Nonce = {block.nonce}'
 
 
 GENESIS_INDEX = 0
-GENESIS_BLOCK = build_block(index=GENESIS_INDEX, prev_hash='GENESIS', nonce_type=1, node_id=-1)
+GENESIS_BLOCK = build_block(index=GENESIS_INDEX, prev_hash='GENESIS', nonce_type=1, node_id=1)
