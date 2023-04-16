@@ -87,6 +87,16 @@ class Block:
             f'\tNonce = {self.nonce}\n' + \
             '-' * 20
 
+    def __eq__(self, other):
+        if not isinstance(other, Block):
+            return False
+        return self.index == other.index and \
+            self.data == other.data and \
+            self.hash == other.hash and \
+            self.prev_hash == other.prev_hash and \
+            self.node_id == other.node_id and \
+            self.nonce == other.nonce
+
 
 def build_new_block(index, prev_hash, node_id, nonce_type) -> Block:
     """Build new block."""
