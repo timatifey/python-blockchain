@@ -57,7 +57,7 @@ class Block:
     @property
     def as_json(self):
         json_dictionary = {
-            'node': self.node_id,
+            'node_id': self.node_id,
             'index': self.index,
             'hash': self.hash,
             'prev_hash': self.prev_hash,
@@ -83,4 +83,14 @@ def build_block(index, prev_hash, nonce_type, node_id):
     return Block(index, prev_hash, nonce_type, node_id)
 
 
-GENESIS_BLOCK = build_block(index=0, prev_hash='GENESIS', nonce_type=1, node_id=-1)
+def block_to_string(block):
+    return f'Node[{block.node_id}]: ' + \
+        f'Index={block.index},' + \
+        f'Hash={block.hash},' + \
+        f'Previous hash={block.prev_hash},' + \
+        f'Data={block.data},' + \
+        f'Nonce={block.nonce}'
+
+
+GENESIS_INDEX = 0
+GENESIS_BLOCK = build_block(index=GENESIS_INDEX, prev_hash='GENESIS', nonce_type=1, node_id=-1)
